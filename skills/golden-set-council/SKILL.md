@@ -212,12 +212,3 @@ The 40% is the headline. Two capable models, one brief, the same material, and t
 What it changed: the earlier single-judge gold held 124 units and the consensus gold holds 190, so 65 units the old benchmark had been calling noise were real. Scored against the system under test, noise fell from 78% to 64% and misses rose from 27% to 36%. A more complete gold moves one number down and the other up, and neither moved in the direction anybody hoped.
 
 Each annotator got exactly one of the two hardest rules wrong at the start, in opposite directions. Neither would have found its own error alone.
-
-## Files
-
-- `references/annotator-brief.md`, the brief template, criteria-free by construction
-- `references/council-protocol.md`, the three-round protocol to hand both agents
-- `references/merge-and-validate.md`, merge semantics and the four validation checks
-- `scripts/council.mjs`, the tool: `check`, `blind`, `diff`, `pack`, `merge`, no dependencies
-
-The script is domain-free and accepts `threadId`, `topics`, `what`, `who` and `messageIds` as aliases for `itemId`, `units`, `label`, `party` and `elementIds`, so a set written against a brief that used the domain's own words needs no rewriting. It was verified by replaying a real council's gold: 84 agreed, 126 disputed, 190 final units, 0 of 366 items differing.

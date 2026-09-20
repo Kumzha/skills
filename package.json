@@ -3,40 +3,11 @@
   "version": "0.1.0",
   "description": "Claude Code skills, installable one at a time.",
   "type": "module",
-  "bin": {
-    "skills": "bin/cli.mjs",
-    "kumzha-skills": "bin/cli.mjs"
-  },
-  "files": [
-    "bin",
-    "skills",
-    ".claude-plugin",
-    "README.md",
-    "LICENSE"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Kumzha/skills.git"
-  },
-  "homepage": "https://github.com/Kumzha/skills#readme",
-  "bugs": {
-    "url": "https://github.com/Kumzha/skills/issues"
-  },
-  "keywords": [
-    "claude",
-    "claude-code",
-    "skills",
-    "agent-skill",
-    "plugin",
-    "evaluation",
-    "ground-truth"
-  ],
-  "author": "Dominykas (https://github.com/Kumzha)",
+  "bin": { "skills": "bin/cli.mjs" },
+  "files": ["bin", "skills"],
+  "engines": { "node": ">=18" },
+  "repository": "github:Kumzha/skills",
+  "keywords": ["claude-code", "skills", "agent-skill"],
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  }
+  "publishConfig": { "access": "public" }
 }
