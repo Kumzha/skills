@@ -1,6 +1,6 @@
 ---
 name: golden-set-council
-description: Build a golden set (ground truth for an eval benchmark) with two or more independent agent annotators who then debate their disagreements into rules. Use when ground truth is needed to score a classifier, agent, extraction or RAG system, when a single-LLM-judge gold needs checking or replacing, or when the user mentions "golden set", "gold standard", "ground truth", "eval dataset", "benchmark", "inter-annotator agreement", "adjudication", "agent council", "annotator debate", "LLM judge". Covers the corpus freeze, the criteria-free brief, blinding, dispute packing, the three-round council, the merge, and validating the gold itself.
+description: Build a golden set, meaning ground truth for evaluating an AI system, labelled by two or more agents that annotate the same corpus independently and then debate their disagreements into a written rule set. Use it to create an eval benchmark from scratch, to check or replace a gold that one LLM judge wrote, to decide whether a prompt, model or pipeline change is an improvement, to choose between models for a labelling step, to pin down a standard nobody has written down yet, or to produce annotation guidelines before paying humans to label at scale. Fits classification, extraction, retrieval relevance, agent behaviour and moderation, and any task where missing something costs more than flagging something extra. Triggers on "golden set", "gold standard", "ground truth", "eval dataset", "evaluation benchmark", "labelled data", "inter-annotator agreement", "adjudication", "LLM judge", "annotation guidelines", "agent council".
 ---
 
 # Golden set by council
@@ -10,6 +10,22 @@ A golden set written by one judge is one opinion. When your system scores badly 
 This method separates them. Two or more agents annotate the same corpus independently from an identical brief, the disagreements get measured instead of smoothed away, and only the disputes go to a debate whose output is a set of rules. The rules are what you keep. The verdicts expire with the corpus.
 
 The debate is usually the largest piece of work, so run this when the benchmark will decide product changes. For a throwaway sanity check, one judge is fine, as long as you never quote its absolute numbers.
+
+## What it is for
+
+Any evaluation where the truth is a set of things rather than a single right answer, and where you cannot simply assume the labels are correct:
+
+- **Building an eval benchmark from scratch**, for a system that extracts fields, retrieves passages, flags content, classifies intent, or decides what an agent should do next. Nothing a score says means anything until the labels underneath it are trustworthy.
+- **Checking a gold you already have.** If one model wrote your ground truth, you have been measuring agreement with that model. A second annotator tells you how much of your benchmark is opinion.
+- **Deciding whether a change is an improvement.** A frozen corpus and a stable gold are what let you compare a new prompt, a new model or a rewritten pipeline against the old one and believe the difference.
+- **Choosing a model for a labelling step.** Run the same prompt through candidates against the same gold. The cheap model sometimes wins, and without ground truth you cannot tell.
+- **Writing down a standard that only exists in people's heads.** The council's output is a numbered rule set arguing from real examples, which is often the first precise statement of what the product is supposed to do. It outlives the corpus and the verdicts.
+- **Producing annotation guidelines** before paying humans to label at scale. The rules and the disputes that produced them are the guideline, and they cost two agent runs instead of a pilot round.
+- **Regression protection.** Once the gold exists, a rules change that quietly makes things worse becomes visible.
+
+It suits work where a miss costs more than a false positive: contract clauses, obligations in correspondence, medical or billing codes, safety and policy labelling, anything where the thing you failed to surface never complains. It suits contested lines too, where two careful readers genuinely disagree, because the disagreement is the finding rather than an annoyance to average away.
+
+Skip it when the labels are obvious and uncontested, or when the eval is a throwaway sanity check. One judge is fine there, as long as you never quote its absolute numbers.
 
 ## Vocabulary
 
@@ -134,7 +150,7 @@ End the round with one consolidated numbered rule set, ratified by both, superse
 {"id": "d001", "verdict": "yes", "rule": "C3", "note": "state — one line, quoting the evidence"}
 ```
 
-Ask for `rule: "none"` where an item needed no rule and was simply obvious. A rule set that only covers the hard cases is worth knowing about: in the measured run, 13 of 126 were obvious.
+Ask for `rule: "none"` where an item needed no rule and was simply obvious. A rule set that only covers the hard cases is worth knowing about, and roughly a tenth of the disputes usually need no rule at all.
 
 Keep `verdict` and `note` separate. `verdict` is inclusion in the gold; `note` carries the state (open, completed, conditional, transferred, elapsed, cancelled) and the evidence for it. One nullable pointer cannot hold three different reasons a unit ended.
 
@@ -163,7 +179,7 @@ Four checks, cheapest first. Detail in `references/merge-and-validate.md`.
 
 **Self-agreement.** Re-run one annotator over the same corpus with the same prompt. Whatever the two passes disagree about is irreducible: it is the annotator's own variance, it is in the gold already, and no system can score above it. Measure the instrument before believing what it measures.
 
-**Calibration against a real human signal.** Find an action in production that means "this was wrong", such as a dismissal, an undo or a rejected suggestion, and check the gold agrees with it. In the measured run the gold and the users landed within five points of each other, which is what made the rest believable.
+**Calibration against a real human signal.** Find an action in production that means "this was wrong", such as a dismissal, an undo or a rejected suggestion, and check the gold agrees with it. Where this was done, the gold and the users landed within five points of each other, which is what made everything else the bench said believable.
 
 **An independent validator.** A third agent, a brief that again states no criteria, and one closing question: would you use this dataset to decide whether a change to the product was an improvement? Ask it to state its sampling method, because a sample drawn only from the entries that look wrong cannot say how often the gold is right.
 
@@ -187,28 +203,18 @@ Everything above except the tooling generalises. With N:
 - Match by anchor or by wording. Anchor-only overstates disagreement, and counting units per item matches two different things merely because each side found two.
 - The scoring join has a known weakness: when the system opens a unit from a later element than the one the annotator anchored to, the same unit scores as noise and as a miss. That is why the gold lists every element belonging to a unit rather than just its ends, and why the near-miss examples must be printed. If those examples are full of produced units whose opening element is plainly part of a gold unit, widen the gold rather than fixing the system.
 - Method notes come after the dataset. Written during, they steer the second half.
-- Ask what the annotators disagreed about, not who was right. In the measured run, 14 of 126 disputes were not a disagreement at all: the brief never said whether to record units that existed and then ended, so one annotator kept them and the other did not. Look for that class first. It is a brief defect, and one rule settles all of them.
+- Ask what the annotators disagreed about, not who was right. A tenth of the disputes in one run were not a disagreement at all: the brief never said whether to record units that existed and were then discharged, so one annotator kept them and the other left them out. Look for that class first. It is a brief defect, and one rule settles all of them.
 - A "settled" field is sparser than the prose notes. Annotators record discharge in `note` more often than they fill `settledBy`, so any metric keyed on it reads conservative. Do not synthesise the id: a settlement nobody wrote down is not evidence.
 - Closure often lands outside the item that opened it, which breaks the implied one-item-one-unit shape. Expect ids pointing elsewhere, and expect to miss some.
-- One opening element can open several units, and units can span items. The one-unit-per-opening shape was wrong about a third of the time in the measured run. Split independently actionable units, and say so in the brief.
+- One opening element can open several units, and units can span items. The one-unit-per-opening shape can be wrong a third of the time. Split independently actionable units, and say so in the brief.
 - Run the script. A clean typecheck is not a working script. While this skill's own tool was being built, a constant was declared below the loop that read it, and the temporal-dead-zone error was swallowed by a parse-tolerant `try/catch`. The corpus loaded silently empty, every headline number still came out right, and two anchors came out wrong. Tolerate only a bad input line, and never wrap the callback.
 
-## What one real run produced
+## Where this came from
 
-One fortnight of one person's messages, 366 items, two annotators from one brief. The numbers are what to expect rather than a target.
+The method and every rule of thumb here were paid for on one real corpus: a fortnight of one person's messages, two annotators working blind, and a live product whose benchmark until then had been a single judge.
 
-| | |
-|---|---|
-| units both found | 84 |
-| units only one found | 126 (56 / 70) |
-| agreement | 40% |
-| of the agreed, differing on whether it ever closed | 5 |
-| rules the council settled on | 12 |
-| Round 3 verdicts | 117 yes, 9 no, 0 unresolved, 13 needing no rule |
-| final gold | 190 units |
+The number worth carrying away is that the two readings agreed on **40%** of what they found. Two capable models, one brief, the same material. That is the honest ceiling on any single-judge gold of a comparable task, and it is invisible until a second annotator exists. Expect your own figure to be lower than feels reasonable.
 
-The 40% is the headline. Two capable models, one brief, the same material, and they agreed on two obligations in five. That is the honest ceiling on any single-judge gold of this task, and it is invisible until a second annotator exists.
-
-What it changed: the earlier single-judge gold held 124 units and the consensus gold holds 190, so 65 units the old benchmark had been calling noise were real. Scored against the system under test, noise fell from 78% to 64% and misses rose from 27% to 36%. A more complete gold moves one number down and the other up, and neither moved in the direction anybody hoped.
+The council settled the rest into twelve rules, and the gold that came out was half as large again as the single judge's. The units it added were real work the old benchmark had been scoring as noise. Expect that shape: a more complete gold moves your noise rate down and your miss rate up, and neither number moves in the direction anybody hoped.
 
 Each annotator got exactly one of the two hardest rules wrong at the start, in opposite directions. Neither would have found its own error alone.

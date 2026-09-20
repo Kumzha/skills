@@ -12,13 +12,22 @@ Start a new Claude Code session afterwards. No dependencies. Until the npm packa
 
 ## golden-set-council
 
-Build eval ground truth with two or more agents that annotate independently and then debate their disagreements into rules.
+Ground truth for evaluating an AI system, labelled by two or more agents that annotate the same corpus independently and then debate their disagreements into a written rule set.
 
-A golden set written by one judge is one opinion. When your system scores badly against it, you cannot tell whether the system is wrong, the gold is wrong, or the question is genuinely hard, and those three need opposite repairs. Two annotators separate them: their agreement rate is the ceiling on any single-judge gold of the same task, and it is invisible until the second annotator exists. On the run this came from, two capable models reading the same material from the same brief agreed on **40%** of what they found.
+Use it to:
+
+- build an eval benchmark from scratch, for anything that extracts fields, retrieves passages, flags content, classifies intent or decides what an agent does next
+- check a gold that one LLM judge wrote, which otherwise means your benchmark measures agreement with that model
+- decide whether a prompt, model or pipeline change is actually an improvement
+- choose between models for a labelling step
+- write down a standard that until now only existed in people's heads, since the council's output is a numbered rule set argued from real examples
+- produce annotation guidelines before paying humans to label at scale
+
+It suits work where a miss costs more than a false positive, and contested lines where two careful readers genuinely disagree, because there the disagreement is the finding rather than noise to average away.
 
 The skill covers the corpus freeze, a brief that deliberately states no criteria, blinding, dispute packing, the three-round council, the merge, and validating the gold itself. It ships `council.mjs` for the mechanical steps: `check`, `blind`, `diff`, `pack`, `merge`.
 
-Verified against a real council rather than a fixture. Replaying two annotator sets reproduces that project's shipped gold exactly: 84 agreed, 126 disputed, 190 final units, 0 of 366 items differing.
+It came out of a real benchmark, where two capable models reading the same material from the same brief agreed on 40% of what they found. That number is the ceiling on any single-judge gold of a comparable task, and it is invisible until a second annotator exists.
 
 [Read it](skills/golden-set-council/SKILL.md)
 
