@@ -162,7 +162,7 @@ Run `check` first, always. A fabricated element id, an `openedBy` outside its ow
 
 `blind` shuffles the two sets into `set_1` and `set_2` and writes the mapping somewhere nothing else reads. Authorship bias is the one contaminant a consensus process cannot survive. An annotator who knows which set is its own defends rather than judges, and every close call goes the same way.
 
-`diff` pairs units across the sets and prints the agreement rate. Treat that number as a finding. It is the honest ceiling on any single-judge gold of the same task. Pairing is by shared anchor or by near-identical wording, because two readings of one unit routinely blame a different element for it, and anchor-only matching would charge them for a difference they do not have.
+`diff` pairs units across the sets and prints the agreement rate. Treat that number as a finding, and expect it to be lower than feels reasonable: on the corpus this method was built from, two capable models working from one brief agreed on 40% of what they found. A low figure is the normal result rather than a fault in the brief, so do not go tuning the brief until it rises. It is the honest ceiling on any single-judge gold of the same task. Pairing follows the policy in the profile, which is why `verify` runs before this: under the wrong policy the number is meaningless, and a flattering agreement rate is what a too-loose policy looks like.
 
 ### 5. The council: three rounds
 
@@ -242,7 +242,7 @@ Everything above except the tooling generalises. With N:
 - The pairing policy is the highest-leverage setting in the pipeline: it decides the agreement rate, the dispute pack, and — because verdict ids are positions in `disputes.json` — the merge. `anchor-or-wording` on an entity-resolution task silently books real disagreements as agreement, which shows up as a suspiciously high agreement rate and a thin dispute pack. Declare three must-not-pair examples and run `verify`; it costs a minute.
 - "State no criteria" governs judgements, not definitions. Withhold where the line falls; state the terms of art. Withhold a word the domain already defines and Round 1 rediscovers a dictionary.
 - Blind per item, not per file. One recognised phrase otherwise unblinds the rest.
-- Match by anchor or by wording. Anchor-only overstates disagreement, and counting units per item matches two different things merely because each side found two.
+- Where the profile says `anchor-or-wording`, that is because anchor-only overstates disagreement when two readings blame the same unit on different elements. It is the right default for that shape and the wrong one wherever the anchor is itself the answer. Counting units per item is never the match: it calls two different things a pair merely because each side found two.
 - The scoring join has a known weakness: when the system opens a unit from a later element than the one the annotator anchored to, the same unit scores as noise and as a miss. That is why the gold lists every element belonging to a unit rather than just its ends, and why the near-miss examples must be printed. If those examples are full of produced units whose opening element is plainly part of a gold unit, widen the gold rather than fixing the system.
 - Method notes come after the dataset. Written during, they steer the second half.
 - Ask what the annotators disagreed about, not who was right. A tenth of the disputes in one run were not a disagreement at all: the brief never said whether to record units that existed and were then discharged, so one annotator kept them and the other left them out. Look for that class first. It is a brief defect, and one rule settles all of them.
@@ -250,13 +250,3 @@ Everything above except the tooling generalises. With N:
 - Closure often lands outside the item that opened it, which breaks the implied one-item-one-unit shape. Expect ids pointing elsewhere, and expect to miss some.
 - One opening element can open several units, and units can span items. The one-unit-per-opening shape can be wrong a third of the time. Split independently actionable units, and say so in the brief.
 - Run the script. A clean typecheck is not a working script. While this skill's own tool was being built, a constant was declared below the loop that read it, and the temporal-dead-zone error was swallowed by a parse-tolerant `try/catch`. The corpus loaded silently empty, every headline number still came out right, and two anchors came out wrong. Tolerate only a bad input line, and never wrap the callback.
-
-## Where this came from
-
-The method and every rule of thumb here were paid for on one real corpus: a fortnight of one person's messages, two annotators working blind, and a live product whose benchmark until then had been a single judge.
-
-The number worth carrying away is that the two readings agreed on **40%** of what they found. Two capable models, one brief, the same material. That is the honest ceiling on any single-judge gold of a comparable task, and it is invisible until a second annotator exists. Expect your own figure to be lower than feels reasonable.
-
-The council settled the rest into twelve rules, and the gold that came out was half as large again as the single judge's. The units it added were real work the old benchmark had been scoring as noise. Expect that shape: a more complete gold moves your noise rate down and your miss rate up, and neither number moves in the direction anybody hoped.
-
-Each annotator got exactly one of the two hardest rules wrong at the start, in opposite directions. Neither would have found its own error alone.
