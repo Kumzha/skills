@@ -49,6 +49,19 @@ const ensureOut = () => {
    direction is packed, which is right for a one-sided task; a two-sided task
    names the half being adjudicated, and merge then reports the other half as
    unreviewed rather than passing it off as consensus. */
+/* The domain profile. Everything that was hardcoded for one task lives here:
+   the pairing policy, which defect families are live, the cost asymmetry.
+   `intake.md` produces it; without one you get the extraction defaults. */
+const PROFILE = (() => {
+  const p = flag('profile', null);
+  if (!p) return {};
+  const path = resolve(p);
+  if (!existsSync(path)) { console.error(`No profile at ${path}`); process.exit(1); }
+  try { return JSON.parse(readFileSync(path, 'utf8')); }
+  catch (e) { console.error(`Profile ${path} is not valid JSON: ${e.message}`); process.exit(1); }
+})();
+const PAIRING = PROFILE.pairing ?? 'anchor-or-wording';
+
 const DISPUTED = flag('direction', null);
 const disputed = (d) => DISPUTED === null || d === DISPUTED;
 const DIRLABEL = DISPUTED ?? 'all';
@@ -147,19 +160,52 @@ const bigrams = (s) => {
   const w = s.split(/\s+/).filter(Boolean);
   return new Set(w.length < 2 ? w : w.slice(0, -1).map((t, i) => `${t} ${w[i + 1]}`));
 };
-/** Anchor OR near-identical wording. Two readings of one obligation routinely */
-/** blame a different line for it; anchor-only counts that as disagreement.    */
-function sameThing(a, b) {
-  if (a.openedBy && a.openedBy === b.openedBy) return true;
-  const x = norm(a.label), y = norm(b.label);
-  if (!x || !y) return false;
-  const gx = bigrams(x), gy = bigrams(y);
-  let hit = 0;
-  for (const g of gx) if (gy.has(g)) hit++;
-  if ((2 * hit) / (gx.size + gy.size) >= 0.5) return true;
-  /* Bigrams miss a paraphrase that keeps the nouns and rewrites around them. */
-  return ratio(x, y) >= 0.55;
+/**
+ * Does the anchor identify the unit, or merely point at it? That question
+ * picks the policy, and picking wrong is not a rounding error.
+ *
+ *   anchor             the anchor IS the answer (entity resolution, retrieval,
+ *                      dedup). Two readings that chose different anchors
+ *                      disagree, by definition.
+ *   anchor-or-wording  the anchor points at a unit two readings may blame on
+ *                      different elements (obligations in a thread). Falls
+ *                      back to near-identical wording.
+ *   overlap            boundaries are fuzzy (spans). Jaccard over elementIds.
+ *
+ * `anchor-or-wording` on an entity-resolution task silently records real
+ * disagreements as agreement: it shrinks the dispute pack, inflates the
+ * agreement rate, and drops precisely the near-miss cases the council most
+ * needs to argue about. Run `verify` before trusting any number.
+ */
+const POLICIES = {
+  anchor: (a, b) => Boolean(a.openedBy) && a.openedBy === b.openedBy,
+
+  'anchor-or-wording': (a, b) => {
+    if (a.openedBy && a.openedBy === b.openedBy) return true;
+    const x = norm(a.label), y = norm(b.label);
+    if (!x || !y) return false;
+    const gx = bigrams(x), gy = bigrams(y);
+    let hit = 0;
+    for (const g of gx) if (gy.has(g)) hit++;
+    if ((2 * hit) / (gx.size + gy.size) >= 0.5) return true;
+    /* Bigrams miss a paraphrase that keeps the nouns and rewrites around them. */
+    return ratio(x, y) >= 0.55;
+  },
+
+  overlap: (a, b) => {
+    const A = new Set(a.elementIds ?? []), B = new Set(b.elementIds ?? []);
+    if (!A.size || !B.size) return false;
+    let hit = 0;
+    for (const id of A) if (B.has(id)) hit++;
+    return hit / (A.size + B.size - hit) >= (PROFILE.overlapThreshold ?? 0.5);
+  },
+};
+
+if (!POLICIES[PAIRING]) {
+  console.error(`Unknown pairing policy "${PAIRING}". One of: ${Object.keys(POLICIES).join(', ')}`);
+  process.exit(1);
 }
+const sameThing = (a, b) => POLICIES[PAIRING](a, b);
 
 /**
  * Pair one item's units across the two readings.
@@ -218,6 +264,40 @@ function check(file, set, scope) {
 }
 
 /* ── run ────────────────────────────────────────────────────────────────── */
+
+/* ── verify ─────────────────────────────────────────────────────────────── */
+/* Every domain has pairs that must not pair. Naming three of them up front is
+   far cheaper than finding the problem in the agreement number. */
+
+if (mode === 'verify') {
+  const must = PROFILE.mustPair ?? [];
+  const mustNot = PROFILE.mustNotPair ?? [];
+  if (!must.length && !mustNot.length) {
+    console.error('Profile declares no mustPair/mustNotPair examples — nothing to verify.');
+    process.exit(1);
+  }
+  console.log(`\n  pairing policy: ${PAIRING}\n`);
+  let bad = 0;
+  const run = (cases, expected, heading) => {
+    if (!cases.length) return;
+    console.log(`  ${heading}`);
+    for (const { a, b, note } of cases) {
+      const got = sameThing(a, b);
+      const ok = got === expected;
+      if (!ok) bad++;
+      console.log(`    ${ok ? 'ok  ' : 'FAIL'}  ${a.openedBy ?? a.label} | ${b.openedBy ?? b.label}${note ? `  (${note})` : ''}`);
+    }
+    console.log('');
+  };
+  run(must, true, 'must pair');
+  run(mustNot, false, 'must NOT pair');
+  if (bad) {
+    console.error(`  ${bad} example(s) the policy gets wrong. Fix the policy before annotating.\n`);
+    process.exit(1);
+  }
+  console.log('  policy agrees with every declared example.\n');
+  process.exit(0);
+}
 
 if (mode === 'check') {
   const file = resolve(rest[0] ?? '');

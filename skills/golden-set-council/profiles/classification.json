@@ -1,0 +1,62 @@
+{
+  "name": "classification",
+  "outcome": "Decides whether a change to the routing classifier ships.",
+  "shape": "classification",
+  "unitSchema": {
+    "core": [
+      "label",
+      "elementIds",
+      "openedBy",
+      "confidence",
+      "why"
+    ],
+    "unused": [
+      "settledBy",
+      "party",
+      "direction"
+    ],
+    "note": "one unit per item; openedBy is the item's own id"
+  },
+  "pairing": "anchor",
+  "pool": {
+    "required": false
+  },
+  "errorCost": {
+    "worse": "false-positive",
+    "ratio": 2,
+    "tieGoesTo": "exclude"
+  },
+  "liveDefects": [
+    "noise",
+    "miss"
+  ],
+  "calibration": {
+    "signal": "agent reassignment after routing"
+  },
+  "mustNotPair": [
+    {
+      "a": {
+        "openedBy": "t100",
+        "label": "billing"
+      },
+      "b": {
+        "openedBy": "t101",
+        "label": "billing"
+      },
+      "note": "same label, different ticket \u2014 classification pairs by item, never by label"
+    }
+  ],
+  "mustPair": [
+    {
+      "a": {
+        "openedBy": "t100",
+        "label": "billing"
+      },
+      "b": {
+        "openedBy": "t100",
+        "label": "billing and payments"
+      },
+      "note": "same ticket, two readings wording the class differently"
+    }
+  ]
+}

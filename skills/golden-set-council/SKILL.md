@@ -39,6 +39,11 @@ The method is domain-free and these three words carry it.
 
 The system under test produces units. The gold holds units. Scoring is a join between them.
 
+What a unit *carries* is domain-specific and lives in the profile, not here. The core
+is a label, an anchor set, a confidence and a why; everything else — `openedBy`,
+`settledBy`, `party`, `direction` — is an extension one shape needs and another does
+not. `intake.md` settles it.
+
 ## Decision zero: what makes a unit, and what the join is
 
 Settle this before anybody annotates. It determines everything downstream.
@@ -54,6 +59,13 @@ Anchor every unit to element ids and score by set membership: the unit's `opened
 | a produced unit still open past the gold's `settledBy` | lived too long |
 
 Five defect families fall out of that for free, and deterministically. The same run scored twice gives the same number, so a difference between two versions of the system was caused by the change.
+
+Which join, and which pairing policy, is intake question 2: is the anchor the answer,
+or a pointer to it? If the anchor is the answer — the chosen record, the retrieved
+document, the predicted class — two readings that chose different anchors disagree by
+definition, and the policy is `anchor`. If it merely points at something two readers
+might blame on different elements, `anchor-or-wording`. Get this wrong and the tooling
+records real disagreements as agreement.
 
 The obvious alternative is to show a model a produced unit and a gold unit and ask whether they are the same thing. It handles paraphrase, but it costs a model call per unit and makes the scoreboard non-reproducible, so two runs of an unchanged system disagree and somebody loses a day to it. Take the id join. Its known weakness is under [Facts that bite](#facts-that-bite).
 
@@ -76,6 +88,19 @@ The gold's shape, one JSON object per line, one line per item:
 
 ## The phases
 
+### 0. Run the intake
+
+`intake.md` is a six-question interview that produces `profile.json`. It settles the
+unit shape, the pairing policy, whether the task needs a candidate pool, the cost
+asymmetry, and which defect families are live.
+
+Run it first, echo the profile back, and get it confirmed. A wrong profile is not
+discovered until the agreement number looks odd, by which point both annotation runs
+are spent. `profiles/` holds worked examples for the three shapes.
+
+Question 0 is a gate: what change will this benchmark greenlight or block? If that
+has no one-sentence answer, the council is not yet justified.
+
 ### 1. Freeze the corpus
 
 Copy it to an immutable directory and never write to it again. Every number the bench prints is against that snapshot. A corpus that moves makes two runs incomparable and you will not notice.
@@ -83,6 +108,13 @@ Copy it to an immutable directory and never write to it again. Every number the 
 Freeze it as a read. Never drive the production ingest path to build it, or you put the corpus's contents into the live system and change the behaviour you are trying to measure.
 
 If the source ages data out, freeze early. Every day of delay costs a day of history.
+
+**If the task is pool-bounded** — entity resolution, retrieval, dedup, anything where
+an annotator cannot see every candidate at once — the candidate pool is part of the
+corpus. Build it once, freeze it with everything else, and hand both annotators the
+same one. Recall is then recall@K and must be quoted that way. An annotator that
+builds its own pool has broken independence at exactly the point the headline number
+depends on.
 
 ### 2. Write the brief, and state no criteria
 
@@ -93,7 +125,7 @@ If the source ages data out, freeze early. Every day of delay costs a day of his
 What the brief does state:
 
 - What the labelled thing is for, concretely. An annotator needs the stakes to judge a borderline case.
-- The cost asymmetry, as a ratio ("one miss is worth about four false positives"), and which way a genuine tie goes.
+- The cost asymmetry from the profile, as a ratio in whichever direction the domain actually runs, and which way a genuine tie goes. Do not assume a miss is the worse error: where the system acts on its output, a false positive can be far more expensive, and one that poisons future runs is worth more again.
 - The closing rule: what evidence ends a unit, and that a topic going quiet is not evidence of anything.
 - The limits of the record, and that silence there is not proof.
 - The exact output shape, the scope, and where to write.
@@ -103,7 +135,7 @@ It ends by asking for a method note, written afterwards rather than during, on t
 
 ### 3. Run the annotators independently
 
-Use different models, or at minimum separate sessions with no shared context. Two runs of one model on one prompt measure that prompt's variance, which is worth knowing and is covered under validation, but it is not a second opinion.
+Use different models, and where you can, models from different labs. Two models from one family share training and therefore share blind spots — the same reason a majority vote is not the answer under "More than two annotators" below. At minimum, separate sessions with no shared context. Two runs of one model on one prompt measure that prompt's variance, which is worth knowing and is covered under validation, but it is not a second opinion.
 
 No communication, no peeking at each other's output, and neither is told which set will be whose. Same brief file byte for byte, same scope, same window.
 
@@ -111,7 +143,15 @@ Let each annotator choose its own working method. One may read directly while an
 
 ### 4. Check, blind, diff
 
+Every command takes `--profile`. Without one you get the extraction defaults, which
+are right for the task this method was first built on and wrong for most others.
+
+Run `verify` before the first `diff`: it checks the pairing policy against the
+must-pair and must-not-pair examples the profile declares, and exits non-zero when
+the policy disagrees with any of them.
+
 ```bash
+node scripts/council.mjs verify --profile ./profile.json
 node scripts/council.mjs check a.ndjson --elements corpus.ndjson --scope items.txt
 node scripts/council.mjs check b.ndjson --elements corpus.ndjson --scope items.txt
 node scripts/council.mjs blind a.ndjson b.ndjson --out ./consensus
@@ -199,6 +239,8 @@ Everything above except the tooling generalises. With N:
 
 - A brief that states criteria measures instruction-following. This is the method's hinge.
 - Check before blinding. Structural faults masquerade as disagreements.
+- The pairing policy is the highest-leverage setting in the pipeline: it decides the agreement rate, the dispute pack, and — because verdict ids are positions in `disputes.json` — the merge. `anchor-or-wording` on an entity-resolution task silently books real disagreements as agreement, which shows up as a suspiciously high agreement rate and a thin dispute pack. Declare three must-not-pair examples and run `verify`; it costs a minute.
+- "State no criteria" governs judgements, not definitions. Withhold where the line falls; state the terms of art. Withhold a word the domain already defines and Round 1 rediscovers a dictionary.
 - Blind per item, not per file. One recognised phrase otherwise unblinds the rest.
 - Match by anchor or by wording. Anchor-only overstates disagreement, and counting units per item matches two different things merely because each side found two.
 - The scoring join has a known weakness: when the system opens a unit from a later element than the one the annotator anchored to, the same unit scores as noise and as a miss. That is why the gold lists every element belonging to a unit rather than just its ends, and why the near-miss examples must be printed. If those examples are full of produced units whose opening element is plainly part of a gold unit, widen the gold rather than fixing the system.

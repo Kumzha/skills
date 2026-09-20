@@ -22,7 +22,9 @@ The promise is <THE ONE THING IT MUST NOT FAIL AT>. <Why a miss is invisible to 
 
 <Why the opposite error is not free either: what it costs, and by what route it kills the product.>
 
-So the two errors are not symmetric. Roughly: one <MISS> is worth about <N> <FALSE POSITIVES>. When a case is genuinely balanced, <WHICH WAY IT GOES>.
+So the two errors are not symmetric. Roughly: one <WORSE ERROR> is worth about <N> <LESSER ERROR>. When a case is genuinely balanced, <WHICH WAY IT GOES>.
+
+<Fill this from `errorCost` in the profile. The direction is not fixed: for a system that surfaces things to a human, a miss is usually worse; for one that acts on its own output, a false positive usually is.>
 
 ## The question, and the one it is not
 
@@ -47,6 +49,8 @@ One limit of this method you should know: the corpus is <WHAT IT HOLDS> and noth
 ## The data
 
 `<PATH>` is a frozen harvest of <WHAT>. It does not change.
+
+<If the task is pool-bounded, say so here and point at the frozen candidate pool: the annotator judges against that pool and nothing wider, and must not go looking for candidates outside it.>
 
 - `elements.ndjson`, one element per line: `id`, `itemId`, `at`, `who`, `text`, `<OWNER FLAG>`
 - `items.ndjson`: `id`, `<GROUPING FIELDS>`, `kind`

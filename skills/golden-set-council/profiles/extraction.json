@@ -1,0 +1,23 @@
+{
+  "name": "extraction",
+  "outcome": "Decides whether a change to obligation detection ships.",
+  "shape": "extraction",
+  "unitSchema": {
+    "core": ["label", "elementIds", "openedBy", "confidence", "why"],
+    "extensions": ["settledBy", "party", "direction"]
+  },
+  "pairing": "anchor-or-wording",
+  "pool": { "required": false },
+  "errorCost": { "worse": "miss", "ratio": 4, "tieGoesTo": "include" },
+  "liveDefects": ["noise", "miss", "duplicate", "over-merge", "lived-too-long"],
+  "calibration": { "signal": "user dismissal of a surfaced obligation" },
+  "mustPair": [
+    { "a": { "openedBy": "m41", "label": "send the revised deck" },
+      "b": { "openedBy": "m43", "label": "send revised deck over" },
+      "note": "one obligation, two readings blaming different messages" }
+  ],
+  "mustNotPair": [
+    { "a": { "openedBy": "m41", "label": "send the revised deck" },
+      "b": { "openedBy": "m77", "label": "book the venue" } }
+  ]
+}

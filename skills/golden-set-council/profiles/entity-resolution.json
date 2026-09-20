@@ -1,0 +1,30 @@
+{
+  "name": "entity-resolution",
+  "outcome": "Decides whether a change to the cross-venue matcher ships.",
+  "shape": "entity-resolution",
+  "unitSchema": {
+    "core": ["label", "elementIds", "openedBy", "confidence", "why"],
+    "unused": ["settledBy", "party"]
+  },
+  "pairing": "anchor",
+  "pool": { "required": true, "k": 50, "note": "recall is recall@K and must be quoted as such" },
+  "errorCost": { "worse": "false-positive", "ratio": 10, "tieGoesTo": "exclude" },
+  "liveDefects": ["noise", "miss", "duplicate", "over-merge"],
+  "calibration": { "signal": null, "reason": "product has no reject control yet" },
+  "mustNotPair": [
+    { "a": { "openedBy": "KXBTC-200K", "label": "Bitcoin above $200k by 2027" },
+      "b": { "openedBy": "KXBTC-250K", "label": "Bitcoin above $250k by 2027" },
+      "note": "same event, different threshold" },
+    { "a": { "openedBy": "KXFED-MAR-25", "label": "Fed cuts 25bps in March" },
+      "b": { "openedBy": "KXFED-MAR-50", "label": "Fed cuts 50bps in March" },
+      "note": "same meeting, different size" },
+    { "a": { "openedBy": "KXMN08-HOUSE", "label": "MN-08 House winner" },
+      "b": { "openedBy": "KXMN08-SENATE", "label": "MN-08 Senate winner" },
+      "note": "same district, different race" }
+  ],
+  "mustPair": [
+    { "a": { "openedBy": "KXPRES-28", "label": "2028 presidential election winner" },
+      "b": { "openedBy": "KXPRES-28", "label": "Who wins the 2028 US presidential race" },
+      "note": "same anchor, paraphrased label" }
+  ]
+}
