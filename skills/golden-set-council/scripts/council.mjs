@@ -38,6 +38,13 @@ const flag = (k, d) => {
 const has = (k) => argv.includes(`--${k}`);
 
 const OUT = resolve(flag('out', './consensus'));
+/* Created lazily by the modes that write. `check` reads and must not litter a
+   directory into the caller's cwd, which it did until this was noticed. */
+let outReady = false;
+const ensureOut = () => {
+  if (!outReady) mkdirSync(OUT, { recursive: true });
+  outReady = true;
+};
 /* Which half of a two-sided task the council argues about. Unset = every
    direction is packed, which is right for a one-sided task; a two-sided task
    names the half being adjudicated, and merge then reports the other half as
@@ -45,7 +52,6 @@ const OUT = resolve(flag('out', './consensus'));
 const DISPUTED = flag('direction', null);
 const disputed = (d) => DISPUTED === null || d === DISPUTED;
 const DIRLABEL = DISPUTED ?? 'all';
-mkdirSync(OUT, { recursive: true });
 
 async function eachLine(file, fn) {
   if (!existsSync(file)) return;
@@ -227,6 +233,7 @@ if (mode === 'blind') {
   const scope = scopeIds([setA, setB]);
   check(a, setA, scope); check(b, setB, scope);
   const flip = Math.random() < 0.5;
+  ensureOut();
   writeFileSync(join(OUT, 'set_1.ndjson'), readFileSync(flip ? a : b));
   writeFileSync(join(OUT, 'set_2.ndjson'), readFileSync(flip ? b : a));
   writeFileSync(join(OUT, 'authorship.json'),
@@ -271,6 +278,7 @@ if (mode === 'pack') {
       context: lines,
     };
   });
+  ensureOut();
   writeFileSync(join(OUT, 'pack.json'), JSON.stringify({ at: new Date().toISOString(), disputes: out }, null, 2));
   console.log(`\nWrote ${join(OUT, 'pack.json')} — ${out.length} disputes, sides randomised per item\n`);
   process.exit(0);
@@ -520,5 +528,6 @@ console.log(`  ${disputes.filter((d) => d.foundBy === '1').length} only in set_1
 console.log(`  ${disputes.filter((d) => d.foundBy === '2').length} only in set_2`);
 console.log(`\n  AGREEMENT ${pc(union ? both / union : 0)}`);
 console.log(`  of the ${both} they agree on, ${settleDiffer} differ on whether it was ever discharged\n`);
-writeFileSync(join(OUT, 'disputes.json'), JSON.stringify({ at: new Date().toISOString(), both, settleDiffer, disputes }, null, 2));
+ensureOut();
+  writeFileSync(join(OUT, 'disputes.json'), JSON.stringify({ at: new Date().toISOString(), both, settleDiffer, disputes }, null, 2));
 console.log(`Wrote ${join(OUT, 'disputes.json')} — ${disputes.length} disputed units\n`);

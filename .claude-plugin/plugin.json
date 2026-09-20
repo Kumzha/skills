@@ -1,0 +1,20 @@
+{
+  "name": "kumzha-skills",
+  "description": "Claude Code skills. Currently golden-set-council: build eval ground truth with two or more agents that annotate independently from a criteria-free brief, then debate their disagreements into rules.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Dominykas",
+    "url": "https://github.com/Kumzha"
+  },
+  "homepage": "https://github.com/Kumzha/skills#readme",
+  "repository": "https://github.com/Kumzha/skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "evaluation",
+    "ground-truth",
+    "benchmark",
+    "llm-evaluation",
+    "claude-code"
+  ]
+}
